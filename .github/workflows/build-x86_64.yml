@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       ssh:
-        description: '是否开启 SSH 接入进行 make menuconfig 调整'
+        description: '是否开启 SSH 接入进行 menuconfig 调整'
         required: false
         type: boolean
         default: false
@@ -29,7 +29,7 @@ jobs:
     - name: 检查代码仓库
       uses: actions/checkout@v4
 
-- name: 初始化编译环境
+    - name: 初始化编译环境
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -84,7 +84,7 @@ jobs:
       run: |
         cd openwrt
         echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 || make -j1 V=s
+        make -j$(nproc) V=s || make -j1 V=s
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: 整理编译产物
@@ -100,13 +100,13 @@ jobs:
       uses: actions/upload-artifact@v4
       if: steps.organize.outputs.status == 'success' && env.UPLOAD_ARTIFACT == 'true' && !cancelled()
       with:
-        name: Lean_x86_64_${{ github.run_id }}
+        name: Lean_OpenWrt_${{ github.run_id }}
         path: ${{ env.FIRMWARE }}
 
     - name: 发布至 GitHub Release
       uses: softprops/action-gh-release@v2
       if: steps.organize.outputs.status == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
       with:
-        tag_name: Lean_x86_64_${{ github.run_id }}
+        tag_name: Lean_OpenWrt_${{ github.run_id }}
         files: ${{ env.FIRMWARE }}/*
         token: ${{ secrets.GITHUB_TOKEN }}
