@@ -34,8 +34,9 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list
-        sudo -E apt-get update
+        sudo -E apt-get -o Acquire::http::Timeout="30" -o Acquire::Retries="3" update
         sudo -E apt-get install -y --no-install-recommends \
+          -o Acquire::http::Timeout="30" -o Acquire::Retries="3" \
           ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
           bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext \
           gcc-multilib g++-multilib git haveged intltool lib32gcc-s1 libc6-dev-i386 \
@@ -55,6 +56,20 @@ jobs:
       run: |
         git clone -b $REPO_BRANCH --depth 1 $REPO_URL openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+
+    # ==================== 核心新增：缓存机制 ====================
+    - name: 缓存 OpenWrt 编译依赖 (dl & ccache)
+      uses: actions/cache@v4
+      with:
+        path: |
+          openwrt/dl
+          openwrt/staging_dir/host
+          openwrt/staging_dir/toolchain
+        key: ${{ runner.os }}-openwrt-${{ hashFiles('openwrt/feeds.conf.default') }}-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-openwrt-${{ hashFiles('openwrt/feeds.conf.default') }}-
+          ${{ runner.os }}-openwrt-
+    # ==========================================================
 
     - name: 加载 DIY-1 脚本 (添加 Feeds)
       run: |
@@ -76,7 +91,7 @@ jobs:
 
     - name: 开启 SSH 终端进行 menuconfig 配置
       uses: P3TERX/ssh2actions@main
-      if: (github.event.inputs.ssh == 'true' || github.event.inputs.ssh == 'true') && !cancelled()
+      if: (github.event.inputs.ssh == 'true') && !cancelled()
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
